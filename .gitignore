@@ -1,7 +1,4 @@
-# Terraform state files
+.terraform/
 terraform.tfstate
 terraform.tfstate.backup
-
-# Terraform plan output
 tfplan
-
