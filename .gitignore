@@ -1,4 +1,8 @@
+# Terraform directories and state
 .terraform/
 terraform.tfstate
 terraform.tfstate.backup
 tfplan
+
+# Optional: local override files
+*.tfvars
