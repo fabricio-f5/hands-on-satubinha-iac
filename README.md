@@ -7,8 +7,10 @@ A infraestrutura criada inclui:
 * Instância **EC2**
 * **Security Group**
 * **SSH Key Pair**
+* Armazenamento de **state remoto em S3** com **lockfile local**
+* Ambientes separados: **dev**, **staging**, **prod**
 
-O projeto segue boas práticas de **organização de código Terraform, modularização e versionamento com Git**.
+O projeto segue boas práticas de **organização de código Terraform, modularização, outputs de módulos e versionamento com Git**.
 
 ---
 
@@ -18,9 +20,10 @@ Este projeto foi desenvolvido com os seguintes objetivos:
 
 * Demonstrar conhecimentos em **Infrastructure as Code (IaC)**
 * Provisionar infraestrutura na AWS usando **Terraform**
-* Utilizar **arquitetura modular**
-* Aplicar boas práticas de **Git para projetos de infraestrutura**
-* Criar um ambiente **reproduzível e automatizado**
+* Utilizar **arquitetura modular com outputs**
+* Aplicar boas práticas de **Git e versionamento seguro**
+* Criar ambientes **dev, staging e prod** isolados e reproduzíveis
+* Integrar backend remoto seguro para manter **state compartilhado e bloqueios**
 
 ---
 
@@ -30,6 +33,7 @@ Este projeto foi desenvolvido com os seguintes objetivos:
 * AWS EC2
 * AWS Security Groups
 * SSH Key Pair
+* AWS S3 para backend remoto
 * Git / GitHub
 * Linux
 
@@ -37,28 +41,59 @@ Este projeto foi desenvolvido com os seguintes objetivos:
 
 ## Estrutura do Repositório
 
-```id="pxn64o"
+```text
 hands-on-satubinha-iac/
 │
-├── main.tf                # Módulo raiz que chama os módulos de infraestrutura
-├── variables.tf           # Variáveis de entrada
-├── terraform.tf           # Configuração do provider AWS
-├── README.md
-├── .gitignore
+├── environments/
+│   ├── dev/
+│   │   ├── backend.tf           # Configuração do backend S3 para dev
+│   │   ├── main.tf              # Módulo raiz do ambiente dev
+│   │   ├── variables.tf         # Variáveis do ambiente dev
+│   │   └── terraform.tfvars     # Valores de variáveis (não versionar)
+│   ├── staging/
+│   │   ├── backend.tf
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   └── terraform.tfvars
+│   └── prod/
+│       ├── backend.tf
+│       ├── main.tf
+│       ├── variables.tf
+│       └── terraform.tfvars
 │
 ├── modules/
 │   ├── aws-ec2-instance/
 │   │   ├── main.tf
-│   │   └── variables.tf
-│   │
+│   │   ├── variables.tf
+│   │   └── outputs.tf
 │   ├── aws-keypair/
 │   │   ├── main.tf
-│   │   └── variables.tf
-│   │
+│   │   ├── variables.tf
+│   │   └── outputs.tf
 │   └── aws-security-group/
 │       ├── main.tf
-│       └── variables.tf
-```
+│       ├── variables.tf
+│       └── outputs.tf
+│
+├── README.md
+└── .gitignore
+````
+
+---
+
+## Separação de Ambientes por Pasta
+
+**Decisão de design:** o projeto usa **pastas separadas para cada ambiente** (`dev`, `staging`, `prod`) em vez de **workspaces do Terraform**.
+
+**Vantagens de pastas por ambiente:**
+
+1. **Isolamento total:** cada ambiente tem seu próprio backend e state, evitando conflitos acidentais.
+2. **Naming dinâmico mais simples:** nomes de recursos podem ser construídos usando `${var.env}` sem risco de duplicação.
+3. **Mais alinhado ao mercado:** em empresas, pipelines CI/CD apontam para pastas específicas, simplificando testes e deploys.
+4. **Menor risco de erro humano:** workspaces compartilham os mesmos arquivos `.tf`, aumentando chances de alterar o ambiente errado.
+5. **Versionamento Git mais claro:** cada ambiente tem sua própria configuração e variáveis, fácil de auditar.
+
+> Resumindo: **pastas = isolamento + segurança + facilidade de manutenção**, enquanto workspaces são mais úteis em projetos experimentais ou pequenos.
 
 ---
 
@@ -74,6 +109,7 @@ Características:
 * Tipo de instância configurável
 * Acesso SSH via Key Pair
 * Associação com Security Group
+* Outputs disponíveis: `instance_id`, `public_ip`, `private_ip`
 
 ---
 
@@ -89,6 +125,7 @@ Portas liberadas:
 | 80    | TCP       | Acesso HTTP |
 
 O tráfego de saída (**egress**) é permitido para todos os destinos.
+Outputs disponíveis: `sg_id`
 
 ---
 
@@ -97,6 +134,19 @@ O tráfego de saída (**egress**) é permitido para todos os destinos.
 Utilizado para acesso seguro à instância EC2.
 
 O Terraform importa a **chave pública SSH da máquina local** e registra na AWS.
+Output disponível: `key_name`
+
+---
+
+### Backend Remoto
+
+O Terraform usa **S3 para armazenar o state** e **lockfile local (`use_lockfile = true`)** para evitar alterações simultâneas, garantindo:
+
+* Colaboração segura entre múltiplos desenvolvedores
+* Proteção contra alterações concorrentes
+* Histórico de estado armazenado no S3
+
+> ⚠️ Observação: o uso do DynamoDB para locks está sendo descontinuado; por isso utilizamos o lockfile local do Terraform.
 
 ---
 
@@ -104,80 +154,75 @@ O Terraform importa a **chave pública SSH da máquina local** e registra na AWS
 
 ### 1. Clonar o repositório
 
-```bash id="crd0ts"
+```bash
 git clone https://github.com/fabricio-f5/hands-on-satubinha-iac.git
 cd hands-on-satubinha-iac
 ```
 
 ---
 
-### 2. Inicializar o Terraform
+### 2. Inicializar o Terraform para um ambiente
 
-```bash id="q9o4yb"
-terraform init
+```bash
+cd environments/dev
+terraform init -reconfigure
 ```
 
-Este comando baixa os providers necessários.
+> Substitua `dev` por `staging` ou `prod` conforme necessário.
 
 ---
 
 ### 3. Visualizar o plano de execução
 
-```bash id="rrkwyr"
-terraform plan
+```bash
+terraform plan -var-file="terraform.tfvars"
 ```
 
 ---
 
 ### 4. Aplicar a infraestrutura
 
-```bash id="x67n3p"
-terraform apply
+```bash
+terraform apply -var-file="terraform.tfvars"
 ```
 
 Confirme digitando **yes** quando solicitado.
 
 ---
 
-## Acessando a Instância EC2
+### 5. Conectar à instância EC2
 
-Após a criação da infraestrutura, conecte via SSH:
-
-```bash id="t9is95"
+```bash
 ssh -i ~/.ssh/id_rsa ec2-user@<ip-publico>
 ```
 
-Substitua `<ip-publico>` pelo IP público da instância criada.
+Substitua `<ip-publico>` pelo IP público obtido via `terraform output`.
 
 ---
 
 ## Boas Práticas Aplicadas
 
-* Arquivos de estado do Terraform **não são versionados**
-* Diretório `.terraform` **ignorado no Git**
-* Estrutura modular para **reutilização de código**
-* Separação clara entre **módulo raiz e módulos de infraestrutura**
+* Estado remoto seguro (`S3 + use_lockfile = true`)
+* Estrutura modular com outputs de todos os módulos
+* Pastas separadas por ambiente (`dev`, `staging`, `prod`)
+* Arquivos de state, planos e variáveis sensíveis **não versionados**
+* `.gitignore` configurado para manter repositório limpo
+* Naming dinâmico por ambiente usando `${var.env}`
 
 ---
 
 ## Possíveis Melhorias
 
-Evoluções futuras para o projeto:
-
-* Backend remoto do Terraform (S3 + DynamoDB)
-* Suporte a múltiplos ambientes (dev / staging / prod)
-* Pipeline CI/CD para Terraform
-* Integração com módulo de VPC
-* Deploy de Auto Scaling Group
+* Pipeline CI/CD para aplicar Terraform automaticamente
+* Módulo de VPC para isolar rede dos ambientes
+* Deploy de Auto Scaling Group e Load Balancer
+* Testes automatizados de `terraform fmt` e `validate` em PRs
 
 ---
 
 ## Autor
 
-**Fabricio F**
-
+**Fabricio Peloso**
 Interessado em Cloud Computing, DevOps e automação de infraestrutura.
 
-GitHub:
-https://github.com/fabricio-f5
 

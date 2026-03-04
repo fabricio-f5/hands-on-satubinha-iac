@@ -6,3 +6,5 @@ tfplan
 
 # Optional: local override files
 *.tfvars
+*.pem
+*.key
