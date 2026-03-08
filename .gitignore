@@ -3,8 +3,9 @@
 terraform.tfstate
 terraform.tfstate.backup
 tfplan
+tfplandestroy
 
 # Optional: local override files
-*.tfvars
+*prod.tfvars
 *.pem
 *.key

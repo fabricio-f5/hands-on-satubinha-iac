@@ -1,24 +1,30 @@
 variable "region" {
-  type    = string
-  default = "us-east-1"
+  description = "AWS Region Deploy"
+  type        = string
+  default     = "us-east-1"
 }
 
 variable "ami_name" {
-  type    = string
+  description = "AMI name filter"
+  type        = string
 }
 
 variable "ami_owner" {
-  type    = string
+  description = "AMI owner account id"
+  type        = string
 }
 
 variable "public_key_path" {
-  type    = string
+  description = "Path to SSH public key"
+  type        = string
 }
 
 variable "vpc_id" {
-  type    = string
+  description = "VPC ID where resources will be deployed"
+  type        = string
 }
 
-variable "env" {
-  type    = string
+variable "environment" {
+  description = "Environment name (dev, stage, prod)"
+  type        = string
 }

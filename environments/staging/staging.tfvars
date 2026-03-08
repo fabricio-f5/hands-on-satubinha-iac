@@ -1,0 +1,6 @@
+environment     = "staging"
+region          = "us-east-1"
+ami_name        = "amzn2-ami-kernel-5.10-hvm-2.0.20260120.1-x86_64-ebs"
+ami_owner       = "137112412989"
+public_key_path = "~/.ssh/id_ed25519.pub"
+vpc_id          = "vpc-0c12d58c505cefcf3"
