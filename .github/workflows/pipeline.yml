@@ -17,5 +17,14 @@ jobs:
       - name: List files in the directory
         run: ls -la
 
+      - name: Show date and time
+        run: date
+
+      - name: Show user information
+        run: whoami
+
+      - name: Show docker version
+        run: docker --version 
+
       - name: Print a message
         run: echo "Pipeline do Satubinha funcionando!"
