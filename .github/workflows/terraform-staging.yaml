@@ -1,4 +1,4 @@
-name: Terraform Staging Workflow
+name: Terraform Staging 
 
 on:
   push:
@@ -9,9 +9,9 @@ on:
 jobs:
   terraform-staging:
     runs-on: ubuntu-latest
-    environment: staging # GitHub Environment, requer aprovação se configurado
+    environment: staging
     concurrency:
-      group: staging 
+      group: staging
       cancel-in-progress: true
 
     defaults:
@@ -25,7 +25,7 @@ jobs:
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
 
-      - name: configure AWS credentials
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -58,8 +58,8 @@ jobs:
         if: success()
         run: echo "Aguardando aprovação manual no GitHub Environment 'staging'"
 
-      - name: Terraform Aplly
-        if: sucess()
+      - name: Terraform Apply
+        if: success()
         run: |
           terraform show -json tfplan | jq '.resource_changes | length' > changes.txt
           CHANGES=$(cat changes.txt)
@@ -67,7 +67,6 @@ jobs:
             terraform apply -auto-approve tfplan
           else
             echo "Sem mudanças no plan. Apply não necessário."
-          fi
 
-      - name: Show terraform output
-        run: terraform output 
+      - name: Show Terraform Output
+        run: terraform output
