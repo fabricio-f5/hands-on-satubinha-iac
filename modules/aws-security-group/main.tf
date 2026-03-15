@@ -23,6 +23,8 @@ resource "aws_security_group" "this" {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
+    cidr_blocks      = []
+    ipv6_cidr_blocks = []
   }
 
   # Entrada TLS interno VPC IPv6
@@ -31,6 +33,8 @@ resource "aws_security_group" "this" {
     from_port        = 443
     to_port          = 443
     protocol         = "tcp"
+    cidr_blocks      = []
+    ipv6_cidr_blocks = []
   }
 
   # Saída completa IPv4
