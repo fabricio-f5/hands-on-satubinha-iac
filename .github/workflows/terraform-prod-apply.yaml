@@ -43,6 +43,9 @@ jobs:
 
       - name: Validate Terraform configuration
         run: terraform validate
+
+      - name: Write prod.tfvars file
+        run: echo "${{ secrets.PROD_TFVARS_CONTENT }}" > prod.tfvars
       
       - name: Terraform Plan
         id: plan
