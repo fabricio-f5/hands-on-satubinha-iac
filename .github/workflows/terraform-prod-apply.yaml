@@ -44,12 +44,12 @@ jobs:
       - name: Validate Terraform configuration
         run: terraform validate
 
-      - name: Write prod.tfvars file
-        run: echo "${{ secrets.PROD_TFVARS_CONTENT }}" > prod.tfvars
+      - name: Write private tfvars file
+        run: echo "${{ secrets.PROD_PRIVATE_TFVARS }}" > prod-private.tfvars
       
       - name: Terraform Plan
         id: plan
-        run: terraform plan -var-file=prod.tfvars -out=tfplan
+        run: terraform plan -var-file=prod-public.tfvars -var-file=prod-private.tfvars -out=tfplan
       
       - name: Shown Terraform Plan
         run: terraform show -json tfplan 
