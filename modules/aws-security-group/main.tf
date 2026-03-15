@@ -2,12 +2,11 @@ resource "aws_security_group" "this" {
   name        = var.name
   description = "Security group for EC2 with SSH and internal TLS"
   vpc_id      = var.vpc_id
-
   tags = {
     Name = var.name
   }
 
-  # Entrada SSH pública (IPv4 e IPv6)
+  #checkov:skip=CKV_AWS_24:SSH aberto necessário - IP dinâmico 5G impede restrição por CIDR
   ingress {
     description      = "SSH access from anywhere"
     from_port        = 22
@@ -19,10 +18,10 @@ resource "aws_security_group" "this" {
 
   # Entrada TLS interno VPC IPv4
   ingress {
-    description = "TLS from VPC IPv4"
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
+    description      = "TLS from VPC IPv4"
+    from_port        = 443
+    to_port          = 443
+    protocol         = "tcp"
     cidr_blocks      = []
     ipv6_cidr_blocks = []
   }
@@ -37,7 +36,7 @@ resource "aws_security_group" "this" {
     ipv6_cidr_blocks = []
   }
 
-  # Saída completa IPv4
+  #checkov:skip=CKV_AWS_382:Egress total necessário - ambiente de estudo com IP dinâmico (5G), restrição por destino não é viável
   egress {
     description = "All outbound IPv4 traffic"
     from_port   = 0
@@ -46,7 +45,7 @@ resource "aws_security_group" "this" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Saída completa IPv6
+  #checkov:skip=CKV_AWS_382:Egress total necessário - ambiente de estudo com IP dinâmico (5G), restrição por destino não é viável
   egress {
     description      = "All outbound IPv6 traffic"
     from_port        = 0
