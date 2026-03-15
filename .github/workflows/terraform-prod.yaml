@@ -60,9 +60,6 @@ jobs:
       - name: Terraform Plan
         id: plan
         run: terraform plan -var-file=prod-private.tfvars -var-file=prod-public.tfvars -out=tfplan
-      
-      - name: Shown Terraform Plan
-        run: terraform show -json tfplan 
 
       - name: Conditional Terraform Apply
         if: ${{ github.event.inputs.apply == 'true' }}
@@ -80,14 +77,14 @@ jobs:
         if: ${{ github.event.inputs.plan_destroy == 'true' }}
         run: |
           echo "Executando terraform plan para destroy..."
-          terraform plan -destroy -var-file=staging.tfvars -out=tfplan_destroy
+          terraform plan -destroy -var-file=prod-private.tfvars -var-file=prod-public.tfvars -out=tfplan_destroy
           terraform show -no-color tfplan_destroy
 
       - name: Conditional Terraform Destroy
         if: ${{ github.event.inputs.destroy == 'true' }}
         run: |
           echo "Executando terraform destroy..."
-          terraform destroy -auto-approve -var-file=staging.tfvars
+          terraform destroy -auto-approve -var-file=prod-private.tfvars -var-file=prod-public.tfvars
 
       - name: Show terraform output
         run: terraform output -json
