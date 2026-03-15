@@ -67,6 +67,7 @@ jobs:
             terraform apply -auto-approve tfplan
           else
             echo "Sem mudanças no plan. Apply não necessário."
+          fi
 
       - name: Show Terraform Output
         run: terraform output
