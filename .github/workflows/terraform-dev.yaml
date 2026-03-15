@@ -2,18 +2,19 @@ name: Terraform Dev Apply Workflow
 
 on:
   workflow_dispatch:
-    apply:
-      description: 'Executar terraform apply?'
-      required: false
-      default: 'false'
-    plan_destroy:
-      description: 'Executar terraform plan para destroy?'
-      required: false
-      default: 'false'
-    destroy:
-      description: 'Executar terraform destroy?'
-      required: false
-      default: 'false'
+    inputs:
+      apply:
+        description: 'Executar terraform apply?'
+        required: false
+        default: 'true'
+      plan_destroy:
+        description: 'Executar terraform plan para destroy?'
+        required: false
+        default: 'false'
+      destroy:
+        description: 'Executar terraform destroy?'
+        required: false
+        default: 'false'
 
 jobs:
   terraform-dev:
