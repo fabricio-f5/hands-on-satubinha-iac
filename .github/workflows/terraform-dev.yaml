@@ -55,6 +55,15 @@ jobs:
 
       - name: Validate Terraform configuration
         run: terraform validate
+
+      - name: Checkov scan
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: .
+          framework: terraform
+          soft_fail: true
+          output_format: cli
+          download_external_modules: false
       
       - name: Terraform Plan
         id: plan
