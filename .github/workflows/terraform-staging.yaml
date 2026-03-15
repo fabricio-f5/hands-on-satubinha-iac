@@ -3,17 +3,22 @@ name: Terraform Staging
 on:
   workflow_dispatch:
     inputs:
-      approve_apply:
-        description: 'Aprovar apply se houver mudanças?'
-        required: true
-        default: 'no'
+      apply:
+        description: 'Executar terraform apply?'
+        required: false
+        default: 'false'
+      plan_destroy:
+        description: 'Executar terraform plan para destroy?'
+        required: false
+        default: 'false'
+      destroy:
+        description: 'Executar terraform destroy?'
+        required: false
+        default: 'false'
 
 jobs:
   terraform-staging:
     runs-on: ubuntu-latest
-    concurrency:
-      group: staging
-      cancel-in-progress: true
 
     defaults:
       run:
@@ -52,16 +57,30 @@ jobs:
         id: plan
         run: terraform plan -var-file=staging.tfvars -out=tfplan
 
-      - name: Show Terraform Plan
-        run: terraform show -no-color tfplan
+      - name: Conditional Terraform Apply
+        if: ${{ github.event.inputs.apply == 'true' }}
+        run: |
+          echo "Executando terraform apply..."
+          terraform show -json tfplan | jq '.resource_changes | length' > changes.txt
+          CHANGES=$(cat changes.txt)
+          if [ "$CHANGES" -gt 0 ]; then
+            terraform apply -auto-approve tfplan
+          else
+            echo "Sem mudanças no plan. Apply não necessário."
+          fi
 
-      - name: Terraform Apply Condicional
-        if: ${{ github.event.inputs.approve_apply == 'yes' }}
-        run: terraform apply -auto-approve tfplan
+      - name: Conditional Terraform Plan Destroy
+        if: ${{ github.event.inputs.plan_destroy == 'true' }}
+        run: |
+          echo "Executando terraform plan para destroy..."
+          terraform plan -destroy -var-file=staging.tfvars -out=tfplan_destroy
+          terraform show -no-color tfplan_destroy
 
-      - name: Abort Apply
-        if: ${{ github.event.inputs.approve_apply != 'yes' }}
-        run: echo "Apply não aprovado. Workflow interrompido." && exit 1
+      - name: Conditional Terraform Destroy
+        if: ${{ github.event.inputs.destroy == 'true' }}
+        run: |
+          echo "Executando terraform destroy..."
+          terraform destroy -auto-approve -var-file=staging.tfvars
 
       - name: Show Terraform Output
         run: terraform output
