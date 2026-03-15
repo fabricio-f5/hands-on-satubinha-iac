@@ -6,6 +6,6 @@ tfplan
 tfplandestroy
 
 # Optional: local override files
-*prod.tfvars
+*.tfvars
 *.pem
 *.key
