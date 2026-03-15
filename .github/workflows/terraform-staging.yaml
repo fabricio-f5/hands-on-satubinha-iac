@@ -1,15 +1,16 @@
 name: Terraform Staging 
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
+    inputs:
+      approve_apply:
+        description: 'Aprovar apply se houver mudanças?'
+        required: true
+        default: 'no'
 
 jobs:
   terraform-staging:
     runs-on: ubuntu-latest
-    environment: staging
     concurrency:
       group: staging
       cancel-in-progress: true
@@ -54,10 +55,11 @@ jobs:
       - name: Show Terraform Plan
         run: terraform show -no-color tfplan
 
-      - name: Manual Approval (via Environment)
-        if: success()
-        run: echo "Aguardando aprovação manual no GitHub Environment 'staging'"
+      - name: Terraform Apply Condicional
+        if: ${{ github.event.inputs.approve_apply == 'yes' }}
+        run: terraform apply -auto-approve tfplan
 
+<<<<<<< HEAD
       - name: Terraform Apply
         if: success()
         run: |
@@ -68,6 +70,11 @@ jobs:
           else
             echo "Sem mudanças no plan. Apply não necessário."
           fi
+=======
+      - name: Abort Apply
+        if: ${{ github.event.inputs.approve_apply != 'yes' }}
+        run: echo "Apply não aprovado. Workflow interrompido." && exit 1
+>>>>>>> 961d662 (adicionar aprovação interativa no workflow de Staging)
 
       - name: Show Terraform Output
         run: terraform output

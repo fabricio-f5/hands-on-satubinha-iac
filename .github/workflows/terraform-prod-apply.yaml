@@ -72,9 +72,5 @@ jobs:
             echo "plan_has_changes=false" >> $GITHUB_ENV
           fi
 
-      - name: Terraform Apply
-        if: env.plan_has_changes == 'true'
-        run: terraform apply -auto-approve tfplan 
-
       - name: Show terraform output
         run: terraform output -json
