@@ -1,21 +1,16 @@
-name: Terraform Dev Workflow
+name: Terraform Staging Apply Workflow
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
 
 jobs:
-  terraform-dev:
+  terraform-staging:
     runs-on: ubuntu-latest
+    environment: staging # GitHub Environment, requer aprovação se configurado
 
     defaults:
       run:
-        working-directory: environments/dev
+        working-directory: environments/staging
 
     steps:
       - name: Checkout repository
@@ -47,4 +42,24 @@ jobs:
         run: terraform validate
       
       - name: Terraform Plan
-        run: terraform plan -var-file=dev.tfvars -out=tfplan
+        id: plan
+        run: terraform plan -var-file=staging.tfvars -out=tfplan
+        continue-on-error: true
+
+      - name: Check if Terraform Plan has changes
+        id: check_plan
+        run: |
+          if terraform show -json tfplan | jq -e '.resource_changes | length > 0'; then
+            echo "Changes detected in Terraform plan."
+            echo "plan_has_changes=true" >> $GITHUB_ENV
+          else
+            echo "No changes detected in Terraform plan."
+            echo "plan_has_changes=false" >> $GITHUB_ENV
+          fi
+
+      - name: Terraform Apply
+        if: env.plan_has_changes == 'true'
+        run: terraform apply -auto-approve tfplan 
+
+      - name: Show terraform output
+        run: terraform output -json

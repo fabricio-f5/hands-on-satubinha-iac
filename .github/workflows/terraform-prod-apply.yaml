@@ -1,0 +1,68 @@
+name: Terraform Prod Apply Workflow
+
+on:
+  workflow_dispatch:
+
+jobs:
+  terraform-prod:
+    runs-on: ubuntu-latest
+    environment: prod # GitHub Environment, requer aprovação se configurado
+    concurrency:
+      group: prod
+      cancel-in-progress: true
+
+    defaults:
+      run:
+        working-directory: environments/prod
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4 
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Write SSH public key to file
+        run: echo "${{ secrets.SSH_PUBLIC_KEY }}" > id_ed25519.pub
+
+      - name: Show Terraform version  
+        run: terraform version
+
+      - name: Terraform fmt check
+        run: terraform fmt -check -recursive
+
+      - name: Initialize Terraform
+        run: terraform init
+
+      - name: Validate Terraform configuration
+        run: terraform validate
+      
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan -var-file=prod.tfvars -out=tfplan
+        continue-on-error: true
+
+      - name: Check if Terraform Plan has changes
+        id: check_plan
+        run: |
+          if terraform show -json tfplan | jq -e '.resource_changes | length > 0'; then
+            echo "Changes detected in Terraform plan."
+            echo "plan_has_changes=true" >> $GITHUB_ENV
+          else
+            echo "No changes detected in Terraform plan."
+            echo "plan_has_changes=false" >> $GITHUB_ENV
+          fi
+
+      - name: Terraform Apply
+        if: env.plan_has_changes == 'true'
+        run: terraform apply -auto-approve tfplan 
+
+      - name: Show terraform output
+        run: terraform output -json
