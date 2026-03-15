@@ -47,7 +47,16 @@ jobs:
       - name: Terraform Plan
         id: plan
         run: terraform plan -var-file=prod.tfvars -out=tfplan
-        continue-on-error: true
+      
+      - name: Shown Terraform Plan
+        run: terraform show -json tfplan 
+
+      - name: Confirm Terraform Apply
+        if: env.plan_has_changes == 'true'
+        uses: hmarr/auto-approve-action@v2
+        with:
+          prompt: "Atenção! Deseja aplicar este plano no PROD?"
+          message: "Aguardando aprovação manual antes do apply em produção."
 
       - name: Check if Terraform Plan has changes
         id: check_plan
