@@ -59,22 +59,9 @@ jobs:
         if: ${{ github.event.inputs.approve_apply == 'yes' }}
         run: terraform apply -auto-approve tfplan
 
-<<<<<<< HEAD
-      - name: Terraform Apply
-        if: success()
-        run: |
-          terraform show -json tfplan | jq '.resource_changes | length' > changes.txt
-          CHANGES=$(cat changes.txt)
-          if [ "$CHANGES" -gt 0 ]; then
-            terraform apply -auto-approve tfplan
-          else
-            echo "Sem mudanças no plan. Apply não necessário."
-          fi
-=======
       - name: Abort Apply
         if: ${{ github.event.inputs.approve_apply != 'yes' }}
         run: echo "Apply não aprovado. Workflow interrompido." && exit 1
->>>>>>> 961d662 (adicionar aprovação interativa no workflow de Staging)
 
       - name: Show Terraform Output
         run: terraform output
