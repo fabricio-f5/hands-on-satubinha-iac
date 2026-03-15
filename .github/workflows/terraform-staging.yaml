@@ -1,12 +1,18 @@
-name: Terraform Staging Apply Workflow
+name: Terraform Staging Workflow
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
   terraform-staging:
     runs-on: ubuntu-latest
     environment: staging # GitHub Environment, requer aprovação se configurado
+    concurrency:
+      group: staging 
+      cancel-in-progress: true
 
     defaults:
       run:
@@ -45,20 +51,23 @@ jobs:
         id: plan
         run: terraform plan -var-file=staging.tfvars -out=tfplan
 
-      - name: Check if Terraform Plan has changes
-        id: check_plan
+      - name: Show Terraform Plan
+        run: terraform show -no-color tfplan
+
+      - name: Manual Approval (via Environment)
+        if: success()
+        run: echo "Aguardando aprovação manual no GitHub Environment 'staging'"
+
+      - name: Terraform Aplly
+        if: sucess()
         run: |
-          if terraform show -json tfplan | jq -e '.resource_changes | length > 0'; then
-            echo "Changes detected in Terraform plan."
-            echo "plan_has_changes=true" >> $GITHUB_ENV
+          terraform show -json tfplan | jq '.resource_changes | length' > changes.txt
+          CHANGES=$(cat changes.txt)
+          if [ "$CHANGES" -gt 0 ]; then
+            terraform apply -auto-approve tfplan
           else
-            echo "No changes detected in Terraform plan."
-            echo "plan_has_changes=false" >> $GITHUB_ENV
+            echo "Sem mudanças no plan. Apply não necessário."
           fi
 
-      - name: Terraform Apply
-        if: env.plan_has_changes == 'true'
-        run: terraform apply -auto-approve tfplan 
-
       - name: Show terraform output
-        run: terraform output -json
+        run: terraform output 

@@ -1,1 +1,2 @@
-region = "us-east-1"
+
+ami_owner       = "137112412989"
