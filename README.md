@@ -1,41 +1,26 @@
 # Hands-On Satubinha – Infraestrutura AWS com Terraform
 
-Este projeto demonstra uma implementação prática (**Hands-On**) de **Infraestrutura como Código (IaC)** utilizando **Terraform** para provisionar recursos na AWS de forma modular e reutilizável.
+Implementação prática de **Infraestrutura como Código (IaC)** utilizando **Terraform** para provisionar recursos na AWS de forma modular, segura e reutilizável, com pipeline CI/CD completo via GitHub Actions.
 
 A infraestrutura criada inclui:
 
-* Instância **EC2**
-* **Security Group**
-* **SSH Key Pair**
-* Armazenamento de **state remoto em S3** com **lockfile local**
-* Ambientes separados: **dev**, **staging**, **prod**
-
-O projeto segue boas práticas de **organização de código Terraform, modularização, outputs de módulos e versionamento com Git**.
-
----
-
-## Objetivo do Projeto
-
-Este projeto foi desenvolvido com os seguintes objetivos:
-
-* Demonstrar conhecimentos em **Infrastructure as Code (IaC)**
-* Provisionar infraestrutura na AWS usando **Terraform**
-* Utilizar **arquitetura modular com outputs**
-* Aplicar boas práticas de **Git e versionamento seguro**
-* Criar ambientes **dev, staging e prod** isolados e reproduzíveis
-* Integrar backend remoto seguro para manter **state compartilhado e bloqueios**
+- Instância **EC2** com IMDSv2 e EBS encriptado
+- **Security Group** com regras de ingress/egress explícitas
+- **SSH Key Pair**
+- Armazenamento de **state remoto em S3** com lockfile nativo
+- **IAM Role** para acesso ao ECR
+- Ambientes separados: **dev**, **staging**, **prod**
 
 ---
 
 ## Tecnologias Utilizadas
 
-* Terraform
-* AWS EC2
-* AWS Security Groups
-* SSH Key Pair
-* AWS S3 para backend remoto
-* Git / GitHub
-* Linux
+- Terraform
+- AWS EC2, S3, IAM, Security Groups, Key Pair
+- GitHub Actions (CI/CD)
+- AWS OIDC (autenticação sem credenciais estáticas)
+- Checkov (scan de segurança IaC)
+- Linux
 
 ---
 
@@ -44,29 +29,46 @@ Este projeto foi desenvolvido com os seguintes objetivos:
 ```text
 hands-on-satubinha-iac/
 │
+├── .github/
+│   └── workflows/
+│       ├── terraform-dev.yaml       # Pipeline do ambiente dev
+│       ├── terraform-staging.yaml   # Pipeline do ambiente staging
+│       └── terraform-prod.yaml      # Pipeline do ambiente prod
+│
 ├── environments/
 │   ├── dev/
-│   │   ├── backend.tf           # Configuração do backend S3 para dev
+│   │   ├── backend.tf           # Backend S3 para dev
 │   │   ├── main.tf              # Módulo raiz do ambiente dev
+│   │   ├── outputs.tf           # Outputs do ambiente dev
+│   │   ├── providers.tf         # Configuração do provider AWS
 │   │   ├── variables.tf         # Variáveis do ambiente dev
-│   │   └── terraform.tfvars     # Valores de variáveis (não versionar)
+│   │   └── dev.tfvars           # Valores de variáveis (não versionado)
 │   ├── staging/
 │   │   ├── backend.tf
 │   │   ├── main.tf
+│   │   ├── outputs.tf
+│   │   ├── providers.tf
 │   │   ├── variables.tf
-│   │   └── terraform.tfvars
+│   │   └── staging.tfvars
 │   └── prod/
 │       ├── backend.tf
 │       ├── main.tf
+│       ├── providers.tf
 │       ├── variables.tf
-│       └── terraform.tfvars
+│       ├── prod-public.tfvars   # Variáveis não sensíveis (versionado)
+│       └── prod-private.tfvars  # Gerado no runner via GitHub Secret
 │
 ├── modules/
 │   ├── aws-ec2-instance/
 │   │   ├── main.tf
+│   │   ├── iam.tf
 │   │   ├── variables.tf
 │   │   └── outputs.tf
 │   ├── aws-keypair/
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   └── outputs.tf
+│   ├── aws-s3-instance/
 │   │   ├── main.tf
 │   │   ├── variables.tf
 │   │   └── outputs.tf
@@ -77,80 +79,115 @@ hands-on-satubinha-iac/
 │
 ├── README.md
 └── .gitignore
-````
+```
+
+---
+
+## Pipeline CI/CD
+
+O projeto tem três workflows independentes, um por ambiente, todos acionados via **`workflow_dispatch`** com inputs manuais.
+
+### Funcionalidades do pipeline
+
+| Feature | Dev | Staging | Prod |
+|---|---|---|---|
+| `terraform fmt -check` | ✅ | ✅ | ✅ |
+| `terraform validate` | ✅ | ✅ | ✅ |
+| Checkov scan (IaC security) | ✅ | ✅ | ✅ |
+| Apply condicional (só se há changes) | ✅ | ✅ | ✅ |
+| Apply default | `true` | `false` | `false` |
+| Autenticação AWS | OIDC | OIDC | OIDC |
+| Environment gate (aprovação manual) | ❌ | ❌ | ✅ |
+| Concurrency lock (bloqueia runs paralelos) | ❌ | ❌ | ✅ |
+| Checkov report como artefacto | ✅ | ✅ | ✅ |
+
+### Inputs disponíveis em cada workflow
+
+```
+apply          → Executar terraform apply? (default: false em staging/prod)
+plan_destroy   → Executar terraform plan para destroy?
+destroy        → Executar terraform destroy?
+```
+
+---
+
+## Segurança
+
+### Autenticação AWS via OIDC
+
+O projeto **não utiliza AWS Access Keys estáticas**. A autenticação é feita via **OpenID Connect (OIDC)**, onde o GitHub emite um token temporário por run que a AWS valida diretamente.
+
+```yaml
+- name: Configure AWS credentials via OIDC
+  uses: aws-actions/configure-aws-credentials@v4
+  with:
+    role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+    aws-region: us-east-1
+    role-session-name: GitHubActions-${{ github.run_id }}
+```
+
+**Vantagens em relação a Access Keys:**
+- Zero credenciais permanentes no repositório
+- Token expira automaticamente ao fim de cada job
+- Sem necessidade de rotação manual de chaves
+- Auditoria nativa via CloudTrail por session name
+
+### Scan de segurança IaC (Checkov)
+
+Cada pipeline executa o **Checkov** automaticamente antes do `terraform plan`, com o relatório guardado como artefacto do run.
+
+Resultados do último scan: **29 passed, 9 failed (todos ignoráveis), 6 skipped (justificados)**
+
+Skips documentados no código:
+- `CKV_AWS_24` — SSH porta 22 aberto: IP dinâmico (5G) impede restrição por CIDR
+- `CKV_AWS_382` — Egress total: ambiente de estudo, restrição por destino não é viável
+
+### Hardening aplicado na infraestrutura
+
+- **IMDSv2 obrigatório** na EC2 — bloqueia acesso ao metadata sem token (`http_tokens = required`)
+- **EBS encriptado** em todas as instâncias (`root_block_device { encrypted = true }`)
+- **S3 Public Access Block** ativo em todos os buckets
+- **IAM Role com princípio do menor privilégio** — EC2 só tem acesso ECR readonly
 
 ---
 
 ## Separação de Ambientes por Pasta
 
-**Decisão de design:** o projeto usa **pastas separadas para cada ambiente** (`dev`, `staging`, `prod`) em vez de **workspaces do Terraform**.
+O projeto usa **pastas separadas por ambiente** (`dev`, `staging`, `prod`) em vez de Terraform workspaces.
 
-**Vantagens de pastas por ambiente:**
+**Vantagens:**
 
-1. **Isolamento total:** cada ambiente tem seu próprio backend e state, evitando conflitos acidentais.
-2. **Naming dinâmico mais simples:** nomes de recursos podem ser construídos usando `${var.env}` sem risco de duplicação.
-3. **Mais alinhado ao mercado:** em empresas, pipelines CI/CD apontam para pastas específicas, simplificando testes e deploys.
-4. **Menor risco de erro humano:** workspaces compartilham os mesmos arquivos `.tf`, aumentando chances de alterar o ambiente errado.
-5. **Versionamento Git mais claro:** cada ambiente tem sua própria configuração e variáveis, fácil de auditar.
-
-> Resumindo: **pastas = isolamento + segurança + facilidade de manutenção**, enquanto workspaces são mais úteis em projetos experimentais ou pequenos.
+1. **Isolamento total** — cada ambiente tem seu próprio backend e state
+2. **Sem risco de conflito** — workspaces partilham os mesmos `.tf`, aumentando risco de erro
+3. **Pipeline CI/CD direto** — cada workflow aponta para a sua pasta
+4. **Auditoria clara no Git** — cada ambiente tem a sua configuração e variáveis
+5. **Alinhado ao mercado** — padrão utilizado em equipas profissionais
 
 ---
 
-## Componentes da Infraestrutura
+## Pré-requisitos
 
-### Instância EC2
+### AWS
 
-Criada através de um módulo Terraform reutilizável.
+- Conta AWS com permissões para EC2, S3, IAM, Security Groups
+- OIDC Provider configurado: `token.actions.githubusercontent.com`
+- IAM Role `github-actions-terraform` com trust policy para este repositório
 
-Características:
+### GitHub Secrets necessários
 
-* AMI configurável
-* Tipo de instância configurável
-* Acesso SSH via Key Pair
-* Associação com Security Group
-* Outputs disponíveis: `instance_id`, `public_ip`, `private_ip`
+| Secret | Descrição |
+|---|---|
+| `AWS_ROLE_ARN` | ARN da IAM Role para OIDC |
+| `SSH_PUBLIC_KEY` | Chave pública SSH para acesso às instâncias |
+| `PROD_PRIVATE_TFVARS` | Conteúdo do ficheiro `prod-private.tfvars` |
 
----
+### GitHub Environments
 
-### Security Group
-
-Controla o acesso à instância EC2.
-
-Portas liberadas:
-
-| Porta | Protocolo | Finalidade  |
-| ----- | --------- | ----------- |
-| 22    | TCP       | Acesso SSH  |
-| 80    | TCP       | Acesso HTTP |
-
-O tráfego de saída (**egress**) é permitido para todos os destinos.
-Outputs disponíveis: `sg_id`
+- `prod` — configurar **required reviewers** para aprovação manual antes de apply/destroy
 
 ---
 
-### SSH Key Pair
-
-Utilizado para acesso seguro à instância EC2.
-
-O Terraform importa a **chave pública SSH da máquina local** e registra na AWS.
-Output disponível: `key_name`
-
----
-
-### Backend Remoto
-
-O Terraform usa **S3 para armazenar o state** e **lockfile local (`use_lockfile = true`)** para evitar alterações simultâneas, garantindo:
-
-* Colaboração segura entre múltiplos desenvolvedores
-* Proteção contra alterações concorrentes
-* Histórico de estado armazenado no S3
-
-> ⚠️ Observação: o uso do DynamoDB para locks está sendo descontinuado; por isso utilizamos o lockfile local do Terraform.
-
----
-
-## Como Executar o Projeto
+## Como Executar Localmente
 
 ### 1. Clonar o repositório
 
@@ -159,9 +196,15 @@ git clone https://github.com/fabricio-f5/hands-on-satubinha-iac.git
 cd hands-on-satubinha-iac
 ```
 
----
+### 2. Configurar credenciais AWS
 
-### 2. Inicializar o Terraform para um ambiente
+```bash
+export AWS_ACCESS_KEY_ID=...
+export AWS_SECRET_ACCESS_KEY=...
+export AWS_DEFAULT_REGION=us-east-1
+```
+
+### 3. Inicializar o Terraform para um ambiente
 
 ```bash
 cd environments/dev
@@ -170,59 +213,55 @@ terraform init -reconfigure
 
 > Substitua `dev` por `staging` ou `prod` conforme necessário.
 
----
-
-### 3. Visualizar o plano de execução
+### 4. Visualizar o plano de execução
 
 ```bash
-terraform plan -var-file="terraform.tfvars"
+terraform plan -var-file="dev.tfvars"
 ```
 
----
-
-### 4. Aplicar a infraestrutura
+### 5. Aplicar a infraestrutura
 
 ```bash
-terraform apply -var-file="terraform.tfvars"
+terraform apply -var-file="dev.tfvars"
 ```
 
-Confirme digitando **yes** quando solicitado.
-
----
-
-### 5. Conectar à instância EC2
+### 6. Conectar à instância EC2
 
 ```bash
-ssh -i ~/.ssh/id_rsa ec2-user@<ip-publico>
+ssh -i ~/.ssh/id_ed25519 ec2-user@$(terraform output -raw public_ip)
 ```
-
-Substitua `<ip-publico>` pelo IP público obtido via `terraform output`.
 
 ---
 
 ## Boas Práticas Aplicadas
 
-* Estado remoto seguro (`S3 + use_lockfile = true`)
-* Estrutura modular com outputs de todos os módulos
-* Pastas separadas por ambiente (`dev`, `staging`, `prod`)
-* Arquivos de state, planos e variáveis sensíveis **não versionados**
-* `.gitignore` configurado para manter repositório limpo
-* Naming dinâmico por ambiente usando `${var.env}`
+- ✅ Autenticação AWS via OIDC — zero credenciais estáticas
+- ✅ Scan de segurança IaC com Checkov em todos os pipelines
+- ✅ IMDSv2 obrigatório e EBS encriptado em todas as instâncias
+- ✅ S3 Public Access Block em todos os buckets
+- ✅ State remoto seguro (`S3 + use_lockfile = true`)
+- ✅ Estrutura modular com outputs em todos os módulos
+- ✅ Ambientes isolados por pasta (`dev`, `staging`, `prod`)
+- ✅ Variáveis sensíveis nunca versionadas (`.gitignore` + GitHub Secrets)
+- ✅ Apply condicional — não aplica planos sem alterações
+- ✅ Concurrency lock e environment gate em prod
+- ✅ `terraform fmt -check` e `validate` em todos os pipelines
 
 ---
 
 ## Possíveis Melhorias
 
-* Pipeline CI/CD para aplicar Terraform automaticamente
-* Módulo de VPC para isolar rede dos ambientes
-* Deploy de Auto Scaling Group e Load Balancer
-* Testes automatizados de `terraform fmt` e `validate` em PRs
+- Módulo de VPC dedicado para isolamento de rede por ambiente
+- `versions.tf` com versões fixas do Terraform e providers
+- Testes de infraestrutura com Terratest ou tflint
+- Auto Scaling Group e Load Balancer
+- Notificações de deploy (Slack, email)
 
 ---
 
 ## Autor
 
-**Fabricio Peloso**
-Interessado em Cloud Computing, DevOps e automação de infraestrutura.
+**Fabricio Peloso**  
+Cloud Computing · DevOps · Infrastructure as Code
 
-
+[![GitHub](https://img.shields.io/badge/GitHub-fabricio--f5-181717?logo=github)](https://github.com/fabricio-f5)
