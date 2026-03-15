@@ -5,7 +5,7 @@ on:
     apply:
       description: 'Executar terraform apply?'
       required: false
-      default: 'true'
+      default: 'false'
     plan_destroy:
       description: 'Executar terraform plan para destroy?'
       required: false
