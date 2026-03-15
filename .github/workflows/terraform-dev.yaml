@@ -1,12 +1,6 @@
 name: Terraform Dev Apply Workflow
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
     apply:
       description: 'Executar terraform apply?'
@@ -61,18 +55,6 @@ jobs:
       - name: Terraform Plan
         id: plan
         run: terraform plan -var-file=dev.tfvars -out=tfplan
-        continue-on-error: true
-
-      - name: Check if Terraform Plan has changes
-        id: check_plan
-        run: |
-          if terraform show -json tfplan | jq -e '.resource_changes | length > 0'; then
-            echo "Changes detected in Terraform plan."
-            echo "plan_has_changes=true" >> $GITHUB_ENV
-          else
-            echo "No changes detected in Terraform plan."
-            echo "plan_has_changes=false" >> $GITHUB_ENV
-          fi
 
       - name: Conditional Terraform Apply
         if: ${{ github.event.inputs.apply == 'true' }}
@@ -86,11 +68,18 @@ jobs:
             echo "Sem mudanças no plan. Apply não necessário."
           fi
 
+      - name: Conditional Terraform Plan Destroy
+        if: ${{ github.event.inputs.plan_destroy == 'true' }}
+        run: |
+          echo "Executando terraform plan para destroy..."
+          terraform plan -destroy -var-file=dev.tfvars -out=tfplan_destroy
+          terraform show -no-color tfplan_destroy
+
       - name: Conditional Terraform Destroy
         if: ${{ github.event.inputs.destroy == 'true' }}
         run: |
           echo "Executando terraform destroy..."
-          terraform destroy -auto-approve -var-file=prod-private.tfvars -var-file=prod-public.tfvars
+          terraform destroy -auto-approve -var-file=dev.tfvars 
 
       - name: Show terraform output
         run: terraform output 
