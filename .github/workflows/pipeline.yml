@@ -1,30 +1,29 @@
-name: Satubinha First Pipeline
+name: Satubinha Day 1
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      -  main 
+  workflow_dispatch:
   
 jobs:
-  test-pipeline:
+  explore-project:
     runs-on: ubuntu-latest  
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Show current directory
-        run: pwd
-
-      - name: List files in the directory
+      - name: Show root files
         run: ls -la
 
-      - name: Show date and time
-        run: date
+      - name: show environment files
+        run: ls -la environments/dev
 
-      - name: Show user information
-        run: whoami
+      - name: Confirm current directory
+        run:
+          pwd
+          ls -la
 
-      - name: Show docker version
-        run: docker --version 
-
-      - name: Print a message
-        run: echo "Pipeline do Satubinha funcionando!"
+      - name: Print success message
+        run: echo "Directory structure is correct. Ready to proceed with the pipeline!"
