@@ -77,10 +77,14 @@ jobs:
 
       - name: Write private tfvars file
         run: echo "${{ secrets.PROD_PRIVATE_TFVARS }}" > prod-private.tfvars
+
+      - name: Cleanup sensitive files
+        if: always()
+        run: rm -f prod-private.tfvars
       
       - name: Terraform Plan
         id: plan
-        run: terraform plan -var-file=prod-private.tfvars -var-file=prod-public.tfvars -out=tfplan
+        run: terraform plan -var-file=prod-public.tfvars -var-file=prod-private.tfvars -var="public_key=${{ secrets.SSH_PUBLIC_KEY }}" -out=tfplan
 
       - name: Conditional Terraform Apply
         if: ${{ github.event.inputs.apply == 'true' }}
@@ -98,14 +102,17 @@ jobs:
         if: ${{ github.event.inputs.plan_destroy == 'true' }}
         run: |
           echo "Executando terraform plan para destroy..."
-          terraform plan -destroy -var-file=dev.tfvars -var="public_key=${{ secrets.SSH_PUBLIC_KEY }}" -out=tfplan_destroy
+          terraform plan -destroy -var-file=prod-public.tfvars -var-file=prod-private.tfvars -var="public_key=${{ secrets.SSH_PUBLIC_KEY }}" -out=tfplan_destroy
           terraform show -no-color tfplan_destroy
 
       - name: Conditional Terraform Destroy
         if: ${{ github.event.inputs.destroy == 'true' }}
         run: |
           echo "Executando terraform destroy..."
-          terraform destroy -auto-approve -var-file=dev.tfvars -var="public_key=${{ secrets.SSH_PUBLIC_KEY }}"
+          terraform destroy -auto-approve \
+          -var-file=prod-public.tfvars \
+          -var-file=prod-private.tfvars \
+          -var="public_key=${{ secrets.SSH_PUBLIC_KEY }}"
 
       - name: Show terraform output
         run: terraform output -json
