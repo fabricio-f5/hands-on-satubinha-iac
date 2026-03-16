@@ -54,8 +54,8 @@ module "ec2_instance" {
 
 # Key Pair
 module "keypair" {
-  source          = "../../modules/aws-keypair"
-  key_name        = "satubinha-${var.environment}-key"
+  source     = "../../modules/aws-keypair"
+  key_name   = "satubinha-${var.environment}-key"
   public_key = var.public_key
 }
 
