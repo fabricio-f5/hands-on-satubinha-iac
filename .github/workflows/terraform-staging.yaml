@@ -73,7 +73,7 @@ jobs:
       
       - name: Terraform Plan
         id: plan
-        run: terraform plan -var-file=staging.tfvars -out=tfplan
+        run: terraform plan -var-file=staging.tfvars -var="public_key=${{ secrets.SSH_PUBLIC_KEY }}" -out=tfplan
 
       - name: Conditional Terraform Apply
         if: ${{ github.event.inputs.apply == 'true' }}
