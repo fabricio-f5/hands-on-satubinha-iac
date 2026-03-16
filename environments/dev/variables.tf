@@ -28,3 +28,14 @@ variable "environment" {
   description = "Environment name (dev, stage, prod)"
   type        = string
 }
+
+variable "instance_type" {
+  description = "Tipo da instância EC2. Ex: t3.micro, t3.small"
+  type        = string
+  default     = "t3.micro"
+}
+
+variable "subnet_id" {
+  description = "ID da subnet onde a instância será criada"
+  type        = string
+}

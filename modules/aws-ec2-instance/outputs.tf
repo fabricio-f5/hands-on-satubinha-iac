@@ -13,8 +13,3 @@ output "private_ip" {
   value       = aws_instance.main.private_ip
 }
 
-output "iam_instance_profile" {
-  description = "AIM da instancia EC2"
-  value = aws_iam_instance_profile.ec2_profile.name
-}
-
