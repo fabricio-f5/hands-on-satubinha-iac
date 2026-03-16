@@ -3,7 +3,7 @@ resource "aws_instance" "main" {
   instance_type          = var.instance_type
   key_name               = var.key_name
   vpc_security_group_ids = var.security_group_ids
-  iam_instance_profile   = aws_iam_instance_profile.ec2_profile.name
+  iam_instance_profile   = var.iam_instance_profile
 
   metadata_options {
     http_endpoint               = "enabled"
@@ -17,6 +17,6 @@ resource "aws_instance" "main" {
 
   tags = {
     Name  = var.instance_name
-    Owner = "${var.project_name}-app"
+    Owner = "${var.project_name}"
   }
 }
