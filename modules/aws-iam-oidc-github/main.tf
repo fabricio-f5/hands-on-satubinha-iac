@@ -1,4 +1,4 @@
-# OIDC Provider — registra o GitHub como IdP confiável na conta AWS
+# OIDC Provider  registra o GitHub como IdP confiável na conta AWS
 
 resource "aws_iam_openid_connect_provider" "github" {
   url = "https://token.actions.githubusercontent.com"
@@ -17,11 +17,11 @@ resource "aws_iam_openid_connect_provider" "github" {
 }
 
 
-# IAM Role — assumida pelo GitHub Actions via OIDC
+# IAM Role  assumida pelo GitHub Actions via OIDC
 
 resource "aws_iam_role" "github_actions" {
   name        = var.role_name
-  description = "Role assumida pelo GitHub Actions via OIDC — repo: ${var.github_repo}"
+  description = "Role assumida pelo GitHub Actions via OIDC  repo: ${var.github_repo}"
   path        = "/ci/"
 
   assume_role_policy = jsonencode({
@@ -37,11 +37,11 @@ resource "aws_iam_role" "github_actions" {
         Action = "sts:AssumeRoleWithWebIdentity"
         Condition = {
           StringEquals = {
-            # "aud" — valida que o token foi emitido para a AWS
+            # "aud"  valida que o token foi emitido para a AWS
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
           }
           StringLike = {
-            # "sub" — restringe ao repo e ref configurados
+            # "sub"  restringe ao repo e ref configurados
             "token.actions.githubusercontent.com:sub" = "repo:${var.github_repo}:${var.github_ref}"
           }
         }
@@ -55,7 +55,7 @@ resource "aws_iam_role" "github_actions" {
 }
 
 # -----------------------------------------------------------------------------
-# Policy Attachments — permissões que o GitHub Actions terá na AWS
+# Policy Attachments  permissões que o GitHub Actions terá na AWS
 # -----------------------------------------------------------------------------
 resource "aws_iam_role_policy_attachment" "extra_policies" {
   for_each = toset(var.policy_arns)
