@@ -52,7 +52,7 @@ jobs:
         run: terraform version
 
       - name: Terraform fmt check
-        run: terraform fmt -check -recursive
+        run: terraform fmt -check 
 
       - name: Initialize Terraform
         run: terraform init
