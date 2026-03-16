@@ -77,10 +77,6 @@ jobs:
 
       - name: Write private tfvars file
         run: echo "${{ secrets.PROD_PRIVATE_TFVARS }}" > prod-private.tfvars
-
-      - name: Cleanup sensitive files
-        if: always()
-        run: rm -f prod-private.tfvars
       
       - name: Terraform Plan
         id: plan
@@ -116,3 +112,7 @@ jobs:
 
       - name: Show terraform output
         run: terraform output -json
+
+      - name: Cleanup sensitive files
+        if: always()
+        run: rm -f prod-private.tfvars
