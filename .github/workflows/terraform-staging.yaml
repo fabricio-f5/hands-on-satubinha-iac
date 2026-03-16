@@ -41,13 +41,6 @@ jobs:
           aws-region: us-east-1
           role-session-name: GitHubActions-${{ github.run_id }}
 
-      - name: Write SSH public key to file
-        run: echo "${{ secrets.SSH_PUBLIC_KEY }}" > id_ed25519.pub
-
-      - name: Cleanup
-        if: always()
-        run: rm -f id_ed25519.pub
-
       - name: Show Terraform version  
         run: terraform version
 
@@ -98,14 +91,14 @@ jobs:
         if: ${{ github.event.inputs.plan_destroy == 'true' }}
         run: |
           echo "Executando terraform plan para destroy..."
-          terraform plan -destroy -var-file=staging.tfvars -out=tfplan_destroy
+          terraform plan -destroy -var-file=dev.tfvars -var="public_key=${{ secrets.SSH_PUBLIC_KEY }}" -out=tfplan_destroy
           terraform show -no-color tfplan_destroy
 
       - name: Conditional Terraform Destroy
         if: ${{ github.event.inputs.destroy == 'true' }}
         run: |
           echo "Executando terraform destroy..."
-          terraform destroy -auto-approve -var-file=staging.tfvars
+          terraform destroy -auto-approve -var-file=dev.tfvars -var="public_key=${{ secrets.SSH_PUBLIC_KEY }}"
 
       - name: Show Terraform Output
         run: terraform output

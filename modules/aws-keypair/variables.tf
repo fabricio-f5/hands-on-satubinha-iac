@@ -1,8 +1,10 @@
 variable "key_name" {
-  type = string
-
+  description = "Nome do Key Pair na AWS"
+  type        = string
 }
 
-variable "public_key_path" {
-  type = string
+variable "public_key" {
+  description = "Conteúdo da chave pública SSH. Ex: 'ssh-ed25519 AAAA...'"
+  type        = string
+  sensitive   = true
 }

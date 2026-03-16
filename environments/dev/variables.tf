@@ -14,8 +14,8 @@ variable "ami_owner" {
   type        = string
 }
 
-variable "public_key_path" {
-  description = "Path to SSH public key"
+variable "public_key" {
+  description = "Conteúdo da chave pública SSH"
   type        = string
 }
 

@@ -56,7 +56,7 @@ module "ec2_instance" {
 module "keypair" {
   source          = "../../modules/aws-keypair"
   key_name        = "satubinha-${var.environment}-key"
-  public_key_path = var.public_key_path
+  public_key = var.public_key
 }
 
 # Security Group
