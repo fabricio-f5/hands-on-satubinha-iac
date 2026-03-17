@@ -14,6 +14,10 @@ resource "aws_iam_openid_connect_provider" "github" {
   tags = {
     Name = "github-actions-oidc-provider"
   }
+
+  lifecycle {
+    prevent_destroy = true  # ← impede destroy acidental
+  }
 }
 
 
