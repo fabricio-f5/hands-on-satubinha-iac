@@ -9,21 +9,6 @@ data "aws_ami" "aws_linux" {
   owners = [var.ami_owner]
 }
 
-# IAM: Role do GitHub Actions (OIDC)
-# Permite que o pipeline assuma credenciais temporárias na AWS
-# Output role_arn → adicionar como secret AWS_ROLE_ARN no repositório GitHub
-module "github_oidc" {
-  source = "../../modules/aws-iam-oidc-github"
-
-  github_repo = "fabricio-f5/hands-on-satubinha-iac"
-  github_ref  = "ref:refs/heads/main" # prod: apenas a branch main pode assumir essa role
-  role_name   = "github-actions-prod-role"
-
-  policy_arns = [
-    "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser", # push de imagens no ECR
-  ]
-}
-
 # IAM: Role da EC2
 # Permite que a instância faça pull de imagens no ECR via Instance Profile
 # O instance_profile_name é passado para o módulo ec2_instance abaixo

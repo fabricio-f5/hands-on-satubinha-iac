@@ -93,7 +93,7 @@ jobs:
         run: |
           echo "Executando terraform plan para destroy..."
           terraform plan -destroy -var-file=dev.tfvars -var="public_key=${{ secrets.SSH_PUBLIC_KEY }}" -out=tfplan_destroy
-          terraform show -no-color tfplan_destroy
+
 
       - name: Conditional Terraform Destroy
         if: ${{ github.event.inputs.destroy == 'true' }}
